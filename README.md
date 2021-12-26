@@ -10,6 +10,48 @@ $ (npm/yarn/pnpm) add yws
 
 ### Example
 
+> WS server
+
+```ts
+import { Server } from "ws";
+
+const wss = new Server({
+  port: 3000,
+  clientTracking: false,
+  maxPayload: 64 * 1024,
+});
+
+type Incoming = {
+  type: "ping";
+};
+
+type Outgoing =
+  | {
+      type: "acknowledgement";
+      id: string;
+    }
+  | {
+      type: "pong";
+    };
+
+wss.on("connection", (socket) => {
+  const ws = wrap<Incoming, Outgoing>(socket);
+
+  ws.commit({
+    type: "acknowledgement",
+    id: ws.id,
+  });
+
+  ws.onMessage(async (data) => {
+    if (data.type === "ping") {
+      ws.commit({
+        type: "pong",
+      });
+    }
+  });
+});
+```
+
 > Fastify server
 
 ```ts

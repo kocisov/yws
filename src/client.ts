@@ -22,6 +22,8 @@ export function createClient<Incoming, Outgoing>({
   reconnectDelay,
 }: Options<Incoming, Outgoing>) {
   let ws: WebSocket;
+  let buffer: string[] = [];
+  let messagesReceived = 0;
   let heartBeatInterval: NodeJS.Timeout;
   let shouldReconnect = true;
 
@@ -31,6 +33,7 @@ export function createClient<Incoming, Outgoing>({
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data.toString());
+        messagesReceived++;
         onMessage?.(data);
       } catch {}
     };
@@ -66,9 +69,18 @@ export function createClient<Incoming, Outgoing>({
     getRaw() {
       return ws;
     },
+    getBuffer() {
+      return buffer;
+    },
+    messagesCount() {
+      return messagesReceived;
+    },
     commit(data: Outgoing) {
+      const message = typeof data === "string" ? data : JSON.stringify(data);
       if (ws.readyState === ws.OPEN) {
-        ws.send(typeof data === "string" ? data : JSON.stringify(data));
+        ws.send(message);
+      } else {
+        buffer.push(message);
       }
     },
     close(disableReconnect = false) {
