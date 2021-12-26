@@ -16,7 +16,7 @@
     "typescript": "^4.5.4"
   },
   "exports": {
-    "./fastify": "./dist/fastify.js",
+    "./server": "./dist/server.js",
     ".": "./dist/client.js"
   },
   "files": [
@@ -34,14 +34,14 @@
   "module": "dist/client.mjs",
   "repository": "https://github.com/kocisov/yws.git",
   "scripts": {
-    "build": "NODE_ENV=production tsup src/fastify.ts src/client.ts --dts --format esm,cjs --env.NODE_ENV production --minify",
+    "build": "NODE_ENV=production tsup src/server.ts src/client.ts --dts --format esm,cjs --env.NODE_ENV production --minify",
     "prepare": "yarn build"
   },
   "types": "dist/client.d.ts",
   "typesVersions": {
     "*": {
-      "fastify": [
-        "dist/fastify.d.ts"
+      "server": [
+        "dist/server.d.ts"
       ]
     }
   }

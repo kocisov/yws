@@ -1,8 +1,11 @@
 import WebSocket from "isomorphic-ws";
+import type { CloseEvent, ErrorEvent } from "ws";
 
 type Options<Incoming, Outgoing> = {
   url: string;
   onMessage?: (data: Incoming) => void;
+  onClose?: (event: CloseEvent) => void;
+  onError?: (event: ErrorEvent) => void;
   reconnectDelay?: number;
   heartBeat?: {
     interval: number;
@@ -13,11 +16,13 @@ type Options<Incoming, Outgoing> = {
 export function createClient<Incoming, Outgoing>({
   url,
   onMessage,
+  onClose,
+  onError,
   heartBeat,
   reconnectDelay,
 }: Options<Incoming, Outgoing>) {
-  let heartBeatInterval: NodeJS.Timeout;
   let ws: WebSocket;
+  let heartBeatInterval: NodeJS.Timeout;
   let shouldReconnect = true;
 
   function reconnect() {
@@ -30,15 +35,20 @@ export function createClient<Incoming, Outgoing>({
       } catch {}
     };
 
-    socket.onclose = () => {
+    socket.onclose = (event) => {
       if (heartBeatInterval) {
         clearInterval(heartBeatInterval);
       }
+      onClose?.(event);
       if (shouldReconnect) {
         setTimeout(() => {
           reconnect();
         }, reconnectDelay ?? 2500);
       }
+    };
+
+    socket.onerror = (event) => {
+      onError?.(event);
     };
 
     if (heartBeat) {

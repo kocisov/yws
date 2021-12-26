@@ -16,12 +16,17 @@ const channels: Record<string, Record<string, ReturnType<typeof wrap>>> = {
   all: {},
 };
 
-export function wrap<Incoming, Outgoing>(connection: SocketStream): Out<Incoming, Outgoing> {
-  connection.setEncoding("utf-8");
-  connection.setDefaultEncoding("utf-8");
-
-  const raw = connection.socket;
+export function wrap<Incoming, Outgoing>(connection: SocketStream | WebSocket): Out<Incoming, Outgoing> {
+  let raw: WebSocket;
   const id = nanoid();
+
+  if ("socket" in connection) {
+    connection.setEncoding("utf-8");
+    connection.setDefaultEncoding("utf-8");
+    raw = connection.socket;
+  } else {
+    raw = connection;
+  }
 
   const wrapped: Out<Incoming, Outgoing> = {
     raw,
@@ -77,7 +82,6 @@ export function wrap<Incoming, Outgoing>(connection: SocketStream): Out<Incoming
 
   raw.on("close", () => {
     for (const channel of Object.keys(channels)) {
-      console.log("LEAVING", channel, id);
       wrapped.leave(channel);
     }
   });

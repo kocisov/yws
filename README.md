@@ -15,7 +15,7 @@ $ (npm/yarn/pnpm) add yws
 ```ts
 import fastify from "fastify";
 import websocketPlugin from "fastify-websocket";
-import { wrap } from "yws/fastify";
+import { wrap } from "yws/server";
 
 type Incoming = {
   t: "ping";
