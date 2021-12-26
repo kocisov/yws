@@ -1,7 +1,7 @@
 {
   "name": "yws",
   "description": "WebSocket Server/Client Wrapper",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "kocisov",
   "bugs": "https://github.com/kocisov/yws/issues",
   "dependencies": {
