@@ -1,0 +1,48 @@
+{
+  "name": "yws",
+  "description": "WebSocket Server/Client Wrapper",
+  "version": "0.0.1",
+  "author": "kocisov",
+  "bugs": "https://github.com/kocisov/yws/issues",
+  "dependencies": {
+    "isomorphic-ws": "^4.0.1",
+    "nanoid": "^3.1.30"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.4",
+    "@types/ws": "^8.2.2",
+    "fastify-websocket": "^4.0.0",
+    "tsup": "^5.11.9",
+    "typescript": "^4.5.4"
+  },
+  "exports": {
+    "./fastify": "./dist/fastify.js",
+    ".": "./dist/client.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "homepage": "https://github.com/kocisov/yws",
+  "keywords": [
+    "Client",
+    "Server",
+    "WebSocket",
+    "Wrapper"
+  ],
+  "license": "MIT",
+  "main": "dist/client.js",
+  "module": "dist/client.mjs",
+  "repository": "https://github.com/kocisov/yws.git",
+  "scripts": {
+    "build": "NODE_ENV=production tsup src/fastify.ts src/client.ts --dts --format esm,cjs --env.NODE_ENV production --minify",
+    "prepare": "yarn build"
+  },
+  "types": "dist/client.d.ts",
+  "typesVersions": {
+    "*": {
+      "fastify": [
+        "dist/fastify.d.ts"
+      ]
+    }
+  }
+}
