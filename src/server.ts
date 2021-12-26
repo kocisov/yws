@@ -8,6 +8,7 @@ type Out<Incoming, Outgoing> = {
   onMessage(handler: (data: Incoming) => void): void;
   join(channel: string): void;
   leave(channel: string): void;
+  leaveAll(): void;
   broadcast(channelOrData: string | Outgoing, data?: Outgoing): void;
   commit(data: Outgoing): void;
 };
@@ -16,7 +17,7 @@ const channels: Record<string, Record<string, ReturnType<typeof wrap>>> = {
   all: {},
 };
 
-export function wrap<Incoming, Outgoing>(connection: SocketStream | WebSocket): Out<Incoming, Outgoing> {
+export function wrap<Incoming, Outgoing>(connection: SocketStream | WebSocket) {
   let raw: WebSocket;
   const id = nanoid();
 
@@ -60,12 +61,18 @@ export function wrap<Incoming, Outgoing>(connection: SocketStream | WebSocket): 
       }
       delete channels[channel][id];
     },
+    leaveAll() {
+      for (const channel of Object.keys(channels)) {
+        wrapped.leave(channel);
+      }
+    },
     broadcast(channelOrData, data) {
-      if (typeof channelOrData !== "string") {
+      if (typeof data === "undefined") {
         for (const savedId in channels.all) {
           channels.all[savedId].commit(channelOrData);
         }
-      } else {
+      }
+      if (typeof channelOrData === "string") {
         for (const savedId in channels[channelOrData]) {
           channels[channelOrData][savedId].commit(data);
         }
@@ -80,11 +87,7 @@ export function wrap<Incoming, Outgoing>(connection: SocketStream | WebSocket): 
 
   wrapped.join("all");
 
-  raw.on("close", () => {
-    for (const channel of Object.keys(channels)) {
-      wrapped.leave(channel);
-    }
-  });
+  raw.on("close", wrapped.leaveAll);
 
   return wrapped;
 }
