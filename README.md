@@ -5,7 +5,7 @@
 ### Installation
 
 ```bash
-$ (npm/yarn/pnpm) install yws
+$ (npm/yarn/pnpm) add yws
 ```
 
 ### Example
