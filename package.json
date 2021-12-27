@@ -9,9 +9,11 @@
     "nanoid": "^3.1.30"
   },
   "devDependencies": {
-    "@types/node": "^17.0.4",
+    "@types/jest": "^27.0.3",
+    "@types/node": "^17.0.5",
     "@types/ws": "^8.2.2",
-    "fastify-websocket": "^4.0.0",
+    "jest": "^27.4.5",
+    "ts-jest": "^27.1.2",
     "tsup": "^5.11.9",
     "typescript": "^4.5.4"
   },
@@ -35,7 +37,8 @@
   "repository": "https://github.com/kocisov/yws.git",
   "scripts": {
     "build": "NODE_ENV=production tsup src/server.ts src/client.ts --dts --format esm,cjs --env.NODE_ENV production --minify",
-    "prepare": "yarn build"
+    "prepare": "yarn build",
+    "test": "jest"
   },
   "types": "dist/client.d.ts",
   "typesVersions": {

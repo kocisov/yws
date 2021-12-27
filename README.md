@@ -2,6 +2,8 @@
 
 > WebSocket Server/Client Wrapper
 
+**🚧 The API is currently changing frequently.**
+
 ### Installation
 
 ```bash
@@ -14,6 +16,7 @@ $ (npm/yarn/pnpm) add yws
 
 ```ts
 import { Server } from "ws";
+import { createTypedFunctions } from "yws/server";
 
 const wss = new Server({
   port: 3000,
@@ -34,8 +37,10 @@ type Outgoing =
       type: "pong";
     };
 
+const { wrap } = createTypedFunctions<Incoming, Outgoing>();
+
 wss.on("connection", (socket) => {
-  const ws = wrap<Incoming, Outgoing>(socket);
+  const ws = wrap(socket);
 
   ws.commit({
     type: "acknowledgement",
@@ -57,7 +62,7 @@ wss.on("connection", (socket) => {
 ```ts
 import fastify from "fastify";
 import websocketPlugin from "fastify-websocket";
-import { wrap } from "yws/server";
+import { createTypedFunctions } from "yws/server";
 
 type Incoming = {
   t: "ping";
@@ -76,6 +81,8 @@ type Outgoing =
       f: string;
     };
 
+const { wrap, broadcast } = createTypedFunctions<Incoming, Outgoing>();
+
 export const app = fastify()
   .register(websocketPlugin)
   .route({
@@ -85,7 +92,7 @@ export const app = fastify()
       res.send("ok");
     },
     wsHandler(connection) {
-      const ws = wrap<Incoming, Outgoing>(connection);
+      const ws = wrap(connection.socket);
 
       ws.commit({
         t: "ack",
@@ -96,16 +103,16 @@ export const app = fastify()
         if (data.t === "ping") {
           ws.commit({ t: "pong" });
         }
-
-        setTimeout(() => {
-          ws.broadcast({
-            t: "hello",
-            f: "broadcast",
-          });
-        }, 5000);
       });
     },
   });
+
+setInterval(() => {
+  broadcast({
+    t: "hello",
+    f: "broadcast",
+  });
+}, 5000);
 
 app.listen(3000);
 ```

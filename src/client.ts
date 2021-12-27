@@ -1,7 +1,7 @@
 import WebSocket from "isomorphic-ws";
 import type { CloseEvent, ErrorEvent } from "ws";
 
-type Options<Incoming, Outgoing> = {
+export type Options<Incoming, Outgoing> = {
   url: string;
   onMessage?: (data: Incoming) => void;
   onClose?: (event: CloseEvent) => void;
