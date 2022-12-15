@@ -24,6 +24,7 @@ export type DataFromDefaultEvent<
   : never;
 
 export type YwsServerWebSocket<O extends z.ZodTypeAny> = {
+  id: string;
   publish(topic: string, data: any): boolean;
   close(code: number, reason: string): void;
   subscribe(topic: string): boolean;
@@ -34,14 +35,15 @@ export type YwsServerWebSocket<O extends z.ZodTypeAny> = {
 
 export type ServerOptions<I extends z.ZodTypeAny, O extends z.ZodTypeAny> = {
   matchEventsOn: keyof z.infer<I> | keyof z.infer<O>;
-  incoming?: I;
-  outgoing?: O;
+  incoming: I;
+  outgoing: O;
   port?: number;
 };
 
 export type ClientOptions<I extends z.ZodTypeAny, O extends z.ZodTypeAny> = {
   url: string;
   matchEventsOn: keyof z.infer<I> | keyof z.infer<O>;
-  incoming?: I;
-  outgoing?: O;
+  incoming: I;
+  outgoing: O;
+  reconnectTimeout?: number;
 };

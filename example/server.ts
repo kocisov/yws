@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import Server from "../server";
 import { clientMessages, serverMessages } from "./messages";
 
@@ -16,18 +17,20 @@ server.on("open", (socket) => {
   console.log(socket.getSubscriptions());
 });
 
-server.on("something", (socket, data) => {}); // This should be an error
+server.on("join", (socket, data) => {
+  socket.subscribe(data.room);
+});
+
+server.on("getRandomNumber", (socket, data) => {
+  const { from, to } = data.p;
+  const randomNumber = randomInt(from, to);
+  socket.send({ t: "randomNumber", p: randomNumber });
+});
 
 let pings = 0;
-
 server.on("ping", (socket, data) => {
   pings++;
   socket.send({ t: "pong" });
-  socket.send({ t: "ok" }); // This should be an error as well
-});
-
-server.on("message", (socket, data) => {
-  socket.send({ t: "test-out", p: pings });
 });
 
 server.on("invalidPayload", (socket, payload) => {
@@ -39,7 +42,8 @@ server.on("error", (socket, error) => {
 });
 
 setInterval(() => {
-  server.publish("messageEvery100ms", {
-    t: "pong",
+  server.publish("randomNumberEvery100ms", {
+    t: "randomNumber",
+    p: randomInt(-1337, 1337),
   });
 }, 100);

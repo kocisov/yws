@@ -8,7 +8,7 @@
 ## Installation
 
 ```bash
-(pnpm/yarn/npm) add yws@next
+$ (pnpm/yarn/npm) add yws@next
 ```
 
 ## Usage

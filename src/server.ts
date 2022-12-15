@@ -1,4 +1,5 @@
 import EventEmitter from "eventemitter3";
+import { nanoid } from "nanoid";
 import type { WebSocket } from "uWebSockets.js";
 import { App } from "uWebSockets.js";
 import { z } from "zod";
@@ -26,6 +27,7 @@ export default function Server<
       maxBackpressure: 1024 * 1024,
 
       open(ws) {
+        ws.id = nanoid();
         events.emit("open", getWebSocket(ws), {
           at: Date.now(),
         });
@@ -41,33 +43,30 @@ export default function Server<
 
       message(ws, message, isBinary) {
         if (isBinary) {
-          ws.end(1003);
+          ws.end(1003, "Binary data is not supported");
           return;
         }
 
         const raw = decoder.decode(message);
 
         try {
-          let data: any;
+          let data;
           const json = JSON.parse(raw);
+          const parsed = incoming.safeParse(json);
 
-          if (incoming) {
-            const parsed = incoming.safeParse(json);
-
-            if (parsed.success) {
-              data = parsed.data;
-            } else {
-              events.emit("invalidPayload", getWebSocket(ws), {
-                at: Date.now(),
-                type: "incoming",
-                data: json,
-              });
-              return;
-            }
+          if (parsed.success) {
+            data = parsed.data;
+          } else {
+            events.emit("invalidPayload", getWebSocket(ws), {
+              at: Date.now(),
+              type: "incoming",
+              data: json,
+            });
+            return;
           }
 
-          events.emit("message", getWebSocket(ws), data);
           events.emit(data[matchEventsOn], getWebSocket(ws), data);
+          events.emit("message", getWebSocket(ws), data);
         } catch (error) {
           events.emit("error", getWebSocket(ws), {
             ...(error as Error),
@@ -78,7 +77,8 @@ export default function Server<
     })
 
     .any("/*", (res, req) => {
-      res.end("Yws v0.1.0");
+      res.writeStatus("404");
+      res.end("Not found");
     })
 
     .listen("0.0.0.0", port, (token) => {
@@ -91,12 +91,22 @@ export default function Server<
 
   function getWebSocket(ws: WebSocket): YwsServerWebSocket<O> {
     return {
+      id: ws.id,
+
       publish(topic, data) {
-        return ws.publish(
-          topic,
-          typeof data === "string" ? data : JSON.stringify(data),
-          false
-        );
+        const parsed = outgoing.safeParse(data);
+
+        if (parsed.success) {
+          return ws.publish(topic, JSON.stringify(parsed.data), false);
+        }
+
+        events.emit("invalidPayload", getWebSocket(ws), {
+          at: Date.now(),
+          type: "outgoing",
+          data,
+        });
+
+        return false;
       },
       close(code, reason) {
         return ws.end(code, reason);
@@ -111,41 +121,36 @@ export default function Server<
         return ws.getTopics();
       },
       send(data) {
-        if (outgoing) {
-          const parsed = outgoing.safeParse(data);
-          if (parsed.success) {
-            return ws.send(JSON.stringify(parsed.data), false);
-          }
-          events.emit("invalidPayload", getWebSocket(ws), {
-            at: Date.now(),
-            type: "outgoing",
-            data,
-          });
-          return 0;
+        const parsed = outgoing.safeParse(data);
+
+        if (parsed.success) {
+          return ws.send(JSON.stringify(parsed.data), false);
         }
-        return ws.send(
-          typeof data === "string" ? data : JSON.stringify(data),
-          false
-        );
+
+        events.emit("invalidPayload", getWebSocket(ws), {
+          at: Date.now(),
+          type: "outgoing",
+          data,
+        });
+
+        return 0;
       },
     };
   }
 
   return {
     publish(topic: string, message: z.infer<O>) {
-      if (outgoing) {
-        const parsed = outgoing.safeParse(message);
-        if (parsed.success) {
-          return instance.publish(topic, JSON.stringify(parsed.data), false);
-        }
-        events.emit("invalidPayload", null, {
-          at: Date.now(),
-          type: "outgoing",
-          data: message,
-        });
-        return;
+      const parsed = outgoing.safeParse(message);
+
+      if (parsed.success) {
+        return instance.publish(topic, JSON.stringify(parsed.data), false);
       }
-      instance.publish(topic, JSON.stringify(message), false);
+
+      return events.emit("invalidPayload", null, {
+        at: Date.now(),
+        type: "outgoing",
+        data: message,
+      });
     },
     on<E extends z.infer<I>[M] | DefaultEvents>(
       event: E,

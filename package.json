@@ -6,6 +6,7 @@
   "bugs": "https://github.com/kocisov/yws/issues",
   "dependencies": {
     "eventemitter3": "^5.0.0",
+    "nanoid": "^4.0.0",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.15.0",
     "ws": "^8.11.0",
     "zod": "^3.20.2"

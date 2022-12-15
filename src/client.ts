@@ -13,7 +13,13 @@ export default function Client<
   I extends z.ZodTypeAny,
   O extends z.ZodTypeAny,
   M extends keyof z.infer<I>
->({ matchEventsOn, incoming, outgoing, url }: ClientOptions<I, O>) {
+>({
+  matchEventsOn,
+  incoming,
+  outgoing,
+  url,
+  reconnectTimeout = 2_500,
+}: ClientOptions<I, O>) {
   let socket: WebSocket;
   const events = new EventEmitter();
 
@@ -27,7 +33,7 @@ export default function Client<
         reason: event.reason,
       });
 
-      setTimeout(connect, 5_000);
+      setTimeout(connect, reconnectTimeout);
     };
 
     socket.onopen = () => {
@@ -35,8 +41,14 @@ export default function Client<
     };
 
     socket.onmessage = (event) => {
-      if (incoming) {
-        const parsed = incoming.safeParse(JSON.parse(event.data));
+      let json;
+
+      try {
+        json = JSON.parse(event.data);
+      } catch (error) {}
+
+      try {
+        const parsed = incoming.safeParse(json);
 
         if (parsed.success) {
           const data = parsed.data;
@@ -50,10 +62,12 @@ export default function Client<
           return;
         }
 
-        events.emit("invalidPayload", {
+        throw new Error("InvalidPayload");
+      } catch (error) {
+        return events.emit("invalidPayload", {
           at: Date.now(),
           data: event.data,
-          error: parsed.error,
+          error,
         });
       }
     };
