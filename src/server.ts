@@ -1,98 +1,184 @@
-import { nanoid } from "nanoid";
-import type { WebSocket } from "ws";
+import EventEmitter from "eventemitter3";
+import type { WebSocket } from "uWebSockets.js";
+import { App } from "uWebSockets.js";
+import { z } from "zod";
+import type {
+  DataFromDefaultEvent,
+  DefaultEvents,
+  ServerOptions,
+  YwsServerWebSocket,
+} from "./types";
 
-export type Out<Incoming, Outgoing> = {
-  raw: WebSocket;
-  id: string;
-  onError(handler: (error: Error) => void): void;
-  onClose(handler: (code: number, reason: string) => void): void;
-  onMessage(handler: (data: Incoming) => void): void;
-  join(channel: string): void;
-  leave(channel: string): void;
-  leaveAll(): void;
-  commit(data: Outgoing | string): void;
-};
+export default function Server<
+  I extends z.ZodTypeAny,
+  O extends z.ZodTypeAny,
+  M extends keyof z.infer<I>
+>({ matchEventsOn, incoming, outgoing, port }: ServerOptions<I, O>) {
+  const events = new EventEmitter();
+  const decoder = new TextDecoder("utf-8");
 
-export function createTypedFunctions<Incoming, Outgoing>() {
-  const channelsInMemory: Record<string, Record<string, Out<Incoming, Outgoing>>> = {
-    all: {},
-  };
+  port = Number(port ?? 3420);
 
-  return {
-    channelsInMemory,
-    wrap(raw: WebSocket) {
-      const id = nanoid();
-      const wrapped: Out<Incoming, Outgoing> = {
-        raw,
-        id,
-        onError(handler) {
-          raw.on("error", handler);
-        },
-        onClose(handler) {
-          raw.on("close", (code, reason) => {
-            handler(code, reason.toString("utf-8"));
-          });
-        },
-        onMessage(handler) {
-          raw.on("message", (message, isBinary) => {
-            if (isBinary) {
+  const instance = App()
+    .ws("/*", {
+      maxPayloadLength: 16 * 1024 * 1024,
+      idleTimeout: 32,
+      maxBackpressure: 1024 * 1024,
+
+      open(ws) {
+        events.emit("open", getWebSocket(ws), {
+          at: Date.now(),
+        });
+      },
+
+      close(ws, code, reason) {
+        events.emit("close", getWebSocket(ws), {
+          at: Date.now(),
+          code,
+          reason,
+        });
+      },
+
+      message(ws, message, isBinary) {
+        if (isBinary) {
+          ws.end(1003);
+          return;
+        }
+
+        const raw = decoder.decode(message);
+
+        try {
+          let data: any;
+          const json = JSON.parse(raw);
+
+          if (incoming) {
+            const parsed = incoming.safeParse(json);
+
+            if (parsed.success) {
+              data = parsed.data;
+            } else {
+              events.emit("invalidPayload", getWebSocket(ws), {
+                at: Date.now(),
+                type: "incoming",
+                data: json,
+              });
               return;
             }
-            try {
-              const data = JSON.parse(message.toString());
-              return handler(data);
-            } catch {}
+          }
+
+          events.emit("message", getWebSocket(ws), data);
+          events.emit(data[matchEventsOn], getWebSocket(ws), data);
+        } catch (error) {
+          events.emit("error", getWebSocket(ws), {
+            ...(error as Error),
+            at: Date.now(),
           });
-        },
-        join(channel) {
-          if (!channelsInMemory[channel]) {
-            channelsInMemory[channel] = {};
-          }
-          if (!channelsInMemory[channel][id]) {
-            channelsInMemory[channel][id] = wrapped;
-          }
-        },
-        leave(channel) {
-          if (!channelsInMemory[channel][id]) {
-            return;
-          }
-          if (Object.keys(channelsInMemory[channel]).length === 1) {
-            delete channelsInMemory[channel];
-            return;
-          }
-          delete channelsInMemory[channel][id];
-        },
-        leaveAll() {
-          for (const channel of Object.keys(channelsInMemory)) {
-            wrapped.leave(channel);
-          }
-        },
-        commit(data) {
-          if (raw.readyState === raw.OPEN) {
-            raw.send(typeof data === "string" ? data : JSON.stringify(data));
-          }
-        },
-      };
-      wrapped.join("all");
-      raw.on("close", wrapped.leaveAll);
-      return wrapped;
-    },
-    broadcast(channelOrData: string | Outgoing, data?: Outgoing) {
-      if (typeof data === "undefined") {
-        for (const savedId in channelsInMemory.all) {
-          channelsInMemory.all[savedId].commit(channelOrData);
         }
+      },
+    })
+
+    .any("/*", (res, req) => {
+      res.end("Yws v0.1.0");
+    })
+
+    .listen("0.0.0.0", port, (token) => {
+      if (token) {
+        console.log(`Listening on port ${port}`);
+      } else {
+        console.log(`Failed to listen to port ${port}`);
       }
-      if (typeof channelOrData === "string" && typeof data !== "undefined") {
-        for (const savedId in channelsInMemory[channelOrData]) {
-          channelsInMemory[channelOrData][savedId].commit(data);
+    });
+
+  function getWebSocket(ws: WebSocket): YwsServerWebSocket<O> {
+    return {
+      publish(topic, data) {
+        return ws.publish(
+          topic,
+          typeof data === "string" ? data : JSON.stringify(data),
+          false
+        );
+      },
+      close(code, reason) {
+        return ws.end(code, reason);
+      },
+      subscribe(topic) {
+        return ws.subscribe(topic);
+      },
+      unsubscribe(topic) {
+        return ws.unsubscribe(topic);
+      },
+      getSubscriptions() {
+        return ws.getTopics();
+      },
+      send(data) {
+        if (outgoing) {
+          const parsed = outgoing.safeParse(data);
+          if (parsed.success) {
+            return ws.send(JSON.stringify(parsed.data), false);
+          }
+          events.emit("invalidPayload", getWebSocket(ws), {
+            at: Date.now(),
+            type: "outgoing",
+            data,
+          });
+          return 0;
         }
+        return ws.send(
+          typeof data === "string" ? data : JSON.stringify(data),
+          false
+        );
+      },
+    };
+  }
+
+  return {
+    publish(topic: string, message: z.infer<O>) {
+      if (outgoing) {
+        const parsed = outgoing.safeParse(message);
+        if (parsed.success) {
+          return instance.publish(topic, JSON.stringify(parsed.data), false);
+        }
+        events.emit("invalidPayload", null, {
+          at: Date.now(),
+          type: "outgoing",
+          data: message,
+        });
+        return;
       }
+      instance.publish(topic, JSON.stringify(message), false);
     },
-    commitTo(id: string, data: Outgoing) {
-      if (channelsInMemory.all[id]) {
-        channelsInMemory.all[id].commit(data);
-      }
+    on<E extends z.infer<I>[M] | DefaultEvents>(
+      event: E,
+      handler: (
+        socket: YwsServerWebSocket<O>,
+        data: E extends z.infer<I>[M]
+          ? Extract<z.infer<I>, { [_ in M]: E }>
+          : DataFromDefaultEvent<I, O, E>
+      ) => void
+    ) {
+      events.on(event, handler);
+    },
+    once<E extends z.infer<I>[M] | DefaultEvents>(
+      event: E,
+      handler: (
+        socket: YwsServerWebSocket<O>,
+        data: E extends z.infer<I>[M]
+          ? Extract<z.infer<I>, { [_ in M]: E }>
+          : DataFromDefaultEvent<I, O, E>
+      ) => void
+    ) {
+      events.once(event, handler);
+    },
+    off<E extends z.infer<I>[M] | DefaultEvents>(
+      event: E,
+      handler: (
+        socket: YwsServerWebSocket<O>,
+        data: E extends z.infer<I>[M]
+          ? Extract<z.infer<I>, { [_ in M]: E }>
+          : DataFromDefaultEvent<I, O, E>
+      ) => void
+    ) {
+      events.off(event, handler);
     },
   };
 }

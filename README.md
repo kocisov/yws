@@ -1,157 +1,92 @@
 # yws
 
-> WebSocket Server/Client Wrapper
+> WebSocket Server library built with uWebSockets and Zod
 
-**🚧 The API is currently changing frequently.**
+> **Warning**
+> Yws is currently under development
 
-### Installation
+## Installation
 
 ```bash
-$ (npm/yarn/pnpm) add yws
+(pnpm/yarn/npm) add yws@next
 ```
 
-### Example
+## Usage
 
-> WS server
+#### Define Messages
 
 ```ts
-import { Server } from "ws";
-import { createTypedFunctions } from "yws/server";
+import { z } from "zod";
 
-const wss = new Server({
-  port: 3000,
-  clientTracking: false,
-  maxPayload: 64 * 1024,
+export const clientMessages = z.object({
+  t: z.literal("ping"),
 });
 
-type Incoming = {
-  type: "ping";
-};
-
-type Outgoing =
-  | {
-      type: "acknowledgement";
-      id: string;
-    }
-  | {
-      type: "pong";
-    };
-
-const { wrap } = createTypedFunctions<Incoming, Outgoing>();
-
-wss.on("connection", (socket) => {
-  const ws = wrap(socket);
-
-  ws.commit({
-    type: "acknowledgement",
-    id: ws.id,
-  });
-
-  ws.onMessage(async (data) => {
-    if (data.type === "ping") {
-      ws.commit({
-        type: "pong",
-      });
-    }
-  });
-});
+export const serverMessages = z.union([
+  z.object({
+    t: z.literal("pong"),
+  }),
+  z.object({
+    t: z.literal("randomNumber"),
+    p: z.number(),
+  }),
+]);
 ```
 
-> Fastify server
+### Server
 
 ```ts
-import fastify from "fastify";
-import websocketPlugin from "fastify-websocket";
-import { createTypedFunctions } from "yws/server";
+import Server from "yws/server";
+import { clientMessages, serverMessages } from "./messages";
 
-type Incoming = {
-  t: "ping";
-};
+const server = Server({
+  matchEventsOn: "t",
+  incoming: clientMessages,
+  outgoing: serverMessages,
+  // port: Number(process.env.PORT ?? 3420),
+});
 
-type Outgoing =
-  | {
-      t: "ack";
-      id: string;
-    }
-  | {
-      t: "pong";
-    }
-  | {
-      t: "hello";
-      f: string;
-    };
+server.on("open", (socket) => {
+  socket.subscribe("messageEvery100ms");
+});
 
-const { wrap, broadcast } = createTypedFunctions<Incoming, Outgoing>();
+server.on("ping", (socket, data) => {
+  socket.send({ t: "pong" });
+});
 
-export const app = fastify()
-  .register(websocketPlugin)
-  .route({
-    url: "/",
-    method: "GET",
-    handler(_req, res) {
-      res.send("ok");
-    },
-    wsHandler(connection) {
-      const ws = wrap(connection.socket);
-
-      ws.commit({
-        t: "ack",
-        id: ws.id,
-      });
-
-      ws.onMessage(async (data) => {
-        if (data.t === "ping") {
-          ws.commit({ t: "pong" });
-        }
-      });
-    },
-  });
+server.on("invalidPayload", (socket, payload) => {
+  console.log("Invalid Payload", payload);
+});
 
 setInterval(() => {
-  broadcast({
-    t: "hello",
-    f: "broadcast",
+  server.publish("messageEvery100ms", {
+    t: "pong",
   });
-}, 5000);
-
-app.listen(3000);
+}, 100);
 ```
 
-> Client
+### Client
 
 ```ts
-import { createClient } from "yws";
+import Client from "yws/client";
+import { clientMessages, serverMessages } from "./messages";
 
-type Incoming = {
-  t: "pong";
-};
-
-type Outgoing =
-  | {
-      t: "ping";
-    }
-  | {
-      t: "hello";
-      d: string;
-    };
-
-const ws = createClient<Incoming, Outgoing>({
-  url: "ws://localhost:3000",
-  onMessage(data) {
-    if (data.t === "pong") {
-      console.log("Heartbeat successful.");
-    }
-  },
-  heartBeat: {
-    shape: {
-      t: "ping",
-    },
-    interval: 25_000,
-  },
+const client = Client({
+  url: "ws://127.0.0.1:3420",
+  matchEventsOn: "t",
+  incoming: serverMessages,
+  outgoing: clientMessages,
 });
 
-ws.commit({
-  t: "hello",
-  d: "lorem ipsum...",
+client.on("open", (event) => {
+  console.log("[WS] Opened", event);
+});
+
+client.on("close", (event) => {
+  console.log("[WS] Closed", event.code, event.reason);
+});
+
+client.on("message", (message) => {
+  console.log("[WS] Message", message);
 });
 ```

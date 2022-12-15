@@ -1,51 +1,45 @@
 {
   "name": "yws",
-  "description": "WebSocket Server/Client Wrapper",
-  "version": "0.0.3",
+  "description": "WebSocket Server library built with uWebSockets and Zod",
+  "version": "0.1.0-next.0",
   "author": "kocisov",
   "bugs": "https://github.com/kocisov/yws/issues",
   "dependencies": {
-    "isomorphic-ws": "^4.0.1",
-    "nanoid": "^3.1.30"
+    "eventemitter3": "^5.0.0",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.15.0",
+    "ws": "^8.11.0",
+    "zod": "^3.20.2"
   },
   "devDependencies": {
-    "@types/jest": "^27.0.3",
-    "@types/node": "^17.0.5",
-    "@types/ws": "^8.2.2",
-    "jest": "^27.4.5",
-    "ts-jest": "^27.1.2",
-    "tsup": "^5.11.9",
-    "typescript": "^4.5.4"
-  },
-  "exports": {
-    "./server": "./dist/server.js",
-    ".": "./dist/client.js"
+    "@types/node": "^18.11.15",
+    "@types/ws": "^8.5.3",
+    "tsup": "^6.5.0",
+    "tsx": "^3.12.1",
+    "typescript": "^4.9.4"
   },
   "files": [
-    "dist"
+    "dist",
+    "index.d.ts",
+    "server.js",
+    "server.d.ts",
+    "client.js",
+    "client.d.ts"
   ],
   "homepage": "https://github.com/kocisov/yws",
   "keywords": [
-    "Client",
+    "Library",
     "Server",
+    "Type Safe",
     "WebSocket",
-    "Wrapper"
+    "Zod"
   ],
   "license": "MIT",
-  "main": "dist/client.js",
-  "module": "dist/client.mjs",
+  "main": "./dist/server.cjs",
   "repository": "https://github.com/kocisov/yws.git",
   "scripts": {
-    "build": "NODE_ENV=production tsup src/server.ts src/client.ts --dts --format esm,cjs --env.NODE_ENV production --minify",
-    "prepare": "yarn build",
-    "test": "jest"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepare": "pnpm build"
   },
-  "types": "dist/client.d.ts",
-  "typesVersions": {
-    "*": {
-      "server": [
-        "dist/server.d.ts"
-      ]
-    }
-  }
+  "types": "index.d.ts"
 }
