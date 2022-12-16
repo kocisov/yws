@@ -1,24 +1,24 @@
 import { z } from "zod";
 
 // const onlyPingMessageAllowed = z.object({
-//   t: z.literal("ping"),
+//   event: z.literal("ping"),
 // });
 
-export const clientMessages = z.discriminatedUnion("t", [
+export const clientMessages = z.discriminatedUnion("event", [
   z.object({
-    t: z.literal("ping"),
+    event: z.literal("ping"),
   }),
   z.object({
-    t: z.literal("join"),
+    event: z.literal("join"),
     room: z.string().min(1),
   }),
   z.object({
-    t: z.literal("leave"),
+    event: z.literal("leave"),
     room: z.string().min(1),
   }),
   z.object({
-    t: z.literal("getRandomNumber"),
-    p: z.object({
+    event: z.literal("getRandomNumber"),
+    payload: z.object({
       from: z.number().min(1),
       to: z.number().min(1),
     }),
@@ -27,18 +27,18 @@ export const clientMessages = z.discriminatedUnion("t", [
 
 export const serverMessages = z.union([
   z.object({
-    t: z.literal("pong"),
+    event: z.literal("pong"),
   }),
   z.object({
-    t: z.literal("joined"),
+    event: z.literal("joined"),
     room: z.string().min(1),
   }),
   z.object({
-    t: z.literal("left"),
+    event: z.literal("left"),
     room: z.string().min(1),
   }),
   z.object({
-    t: z.literal("randomNumber"),
-    p: z.number(),
+    event: z.literal("randomNumber"),
+    value: z.number(),
   }),
 ]);

@@ -1,9 +1,9 @@
 import { randomInt } from "node:crypto";
-import Server from "../server";
+import Server from "../dist/server";
 import { clientMessages, serverMessages } from "./messages";
 
 const server = Server({
-  matchEventsOn: "t",
+  matchEventsOn: "event",
   incoming: clientMessages,
   outgoing: serverMessages,
   // port: Number(process.env.PORT ?? 3420),
@@ -22,15 +22,15 @@ server.on("join", (socket, data) => {
 });
 
 server.on("getRandomNumber", (socket, data) => {
-  const { from, to } = data.p;
+  const { from, to } = data.payload;
   const randomNumber = randomInt(from, to);
-  socket.send({ t: "randomNumber", p: randomNumber });
+  socket.send({ event: "randomNumber", value: randomNumber });
 });
 
 let pings = 0;
 server.on("ping", (socket, data) => {
   pings++;
-  socket.send({ t: "pong" });
+  socket.send({ event: "pong" });
 });
 
 server.on("invalidPayload", (socket, payload) => {
@@ -43,7 +43,7 @@ server.on("error", (socket, error) => {
 
 setInterval(() => {
   server.publish("randomNumberEvery100ms", {
-    t: "randomNumber",
-    p: randomInt(-1337, 1337),
+    event: "randomNumber",
+    value: randomInt(-1337, 1337),
   });
 }, 100);

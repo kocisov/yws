@@ -13,22 +13,22 @@ $ (pnpm/yarn/npm) add yws@next
 
 ## Usage
 
-#### Define Messages
+##### Define your messages/schema with Zod
 
 ```ts
 import { z } from "zod";
 
 export const clientMessages = z.object({
-  t: z.literal("ping"),
+  event: z.literal("ping"),
 });
 
 export const serverMessages = z.union([
   z.object({
-    t: z.literal("pong"),
+    event: z.literal("pong"),
   }),
   z.object({
-    t: z.literal("randomNumber"),
-    p: z.number(),
+    event: z.literal("randomNumber"),
+    value: z.number(),
   }),
 ]);
 ```
@@ -40,7 +40,7 @@ import Server from "yws/server";
 import { clientMessages, serverMessages } from "./messages";
 
 const server = Server({
-  matchEventsOn: "t",
+  matchEventsOn: "event",
   incoming: clientMessages,
   outgoing: serverMessages,
   // port: Number(process.env.PORT ?? 3420),
@@ -51,7 +51,7 @@ server.on("open", (socket) => {
 });
 
 server.on("ping", (socket, data) => {
-  socket.send({ t: "pong" });
+  socket.send({ event: "pong" });
 });
 
 server.on("invalidPayload", (socket, payload) => {
@@ -60,7 +60,7 @@ server.on("invalidPayload", (socket, payload) => {
 
 setInterval(() => {
   server.publish("messageEvery100ms", {
-    t: "pong",
+    event: "pong",
   });
 }, 100);
 ```
@@ -73,7 +73,7 @@ import { clientMessages, serverMessages } from "./messages";
 
 const client = Client({
   url: "ws://127.0.0.1:3420",
-  matchEventsOn: "t",
+  matchEventsOn: "event",
   incoming: serverMessages,
   outgoing: clientMessages,
 });
