@@ -7,7 +7,7 @@ export type DefaultEvents =
   | "message"
   | "invalidPayload";
 
-export type DataFromDefaultEvent<
+export type DataFromDefaultEvents<
   I extends z.ZodTypeAny,
   O extends z.ZodTypeAny,
   E

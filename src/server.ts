@@ -4,11 +4,18 @@ import type { WebSocket } from "uWebSockets.js";
 import { App } from "uWebSockets.js";
 import { z } from "zod";
 import type {
-  DataFromDefaultEvent,
+  DataFromDefaultEvents,
   DefaultEvents,
   ServerOptions,
   YwsServerWebSocket,
 } from "./types";
+
+export {
+  DataFromDefaultEvents,
+  DefaultEvents,
+  ServerOptions,
+  YwsServerWebSocket,
+};
 
 export default function Server<
   I extends z.ZodTypeAny,
@@ -158,7 +165,7 @@ export default function Server<
         socket: YwsServerWebSocket<O>,
         data: E extends z.infer<I>[M]
           ? Extract<z.infer<I>, { [_ in M]: E }>
-          : DataFromDefaultEvent<I, O, E>
+          : DataFromDefaultEvents<I, O, E>
       ) => void
     ) {
       events.on(event, handler);
@@ -169,7 +176,7 @@ export default function Server<
         socket: YwsServerWebSocket<O>,
         data: E extends z.infer<I>[M]
           ? Extract<z.infer<I>, { [_ in M]: E }>
-          : DataFromDefaultEvent<I, O, E>
+          : DataFromDefaultEvents<I, O, E>
       ) => void
     ) {
       events.once(event, handler);
@@ -180,7 +187,7 @@ export default function Server<
         socket: YwsServerWebSocket<O>,
         data: E extends z.infer<I>[M]
           ? Extract<z.infer<I>, { [_ in M]: E }>
-          : DataFromDefaultEvent<I, O, E>
+          : DataFromDefaultEvents<I, O, E>
       ) => void
     ) {
       events.off(event, handler);

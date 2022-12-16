@@ -18,13 +18,18 @@
     "tsx": "^3.12.1",
     "typescript": "^4.9.4"
   },
+  "exports": {
+    "./server": {
+      "import": "./dist/server.js",
+      "require": "./dist/server.js"
+    },
+    "./client": {
+      "import": "./dist/client.js",
+      "require": "./dist/client.js"
+    }
+  },
   "files": [
-    "dist",
-    "index.d.ts",
-    "server.js",
-    "server.d.ts",
-    "client.js",
-    "client.d.ts"
+    "dist"
   ],
   "homepage": "https://github.com/kocisov/yws",
   "keywords": [
@@ -35,12 +40,21 @@
     "Zod"
   ],
   "license": "MIT",
-  "main": "./dist/server.cjs",
+  "main": "./dist/server.js",
   "repository": "https://github.com/kocisov/yws.git",
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
     "prepare": "pnpm build"
   },
-  "types": "index.d.ts"
+  "typesVersions": {
+    "*": {
+      "server": [
+        "dist/server.d.ts"
+      ],
+      "client": [
+        "dist/client.d.ts"
+      ]
+    }
+  }
 }

@@ -2,9 +2,11 @@ import EventEmitter from "eventemitter3";
 import { z } from "zod";
 import type {
   ClientOptions,
-  DataFromDefaultEvent,
+  DataFromDefaultEvents,
   DefaultEvents,
 } from "./types";
+
+export { ClientOptions, DataFromDefaultEvents, DefaultEvents };
 
 const WebSocket =
   typeof window === "undefined" ? require("ws") : window.WebSocket;
@@ -101,7 +103,7 @@ export default function Client<
       handler: (
         data: E extends z.infer<I>[M]
           ? Extract<z.infer<I>, { [_ in M]: E }>
-          : DataFromDefaultEvent<I, O, E>
+          : DataFromDefaultEvents<I, O, E>
       ) => void
     ) {
       events.on(event, handler);
@@ -112,7 +114,7 @@ export default function Client<
       handler: (
         data: E extends z.infer<I>[M]
           ? Extract<z.infer<I>, { [_ in M]: E }>
-          : DataFromDefaultEvent<I, O, E>
+          : DataFromDefaultEvents<I, O, E>
       ) => void
     ) {
       events.once(event, handler);
@@ -123,7 +125,7 @@ export default function Client<
       handler: (
         data: E extends z.infer<I>[M]
           ? Extract<z.infer<I>, { [_ in M]: E }>
-          : DataFromDefaultEvent<I, O, E>
+          : DataFromDefaultEvents<I, O, E>
       ) => void
     ) {
       events.off(event, handler);
