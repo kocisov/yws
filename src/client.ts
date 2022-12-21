@@ -26,7 +26,7 @@ export default function Client<
   let heartbeatIntervalId: ReturnType<typeof setInterval>;
 
   const events = new EventEmitter();
-  const queue: { at: number; event?: string; data: unknown }[] = [];
+  // const queue: { at: number; event?: string; data: unknown }[] = [];
 
   function connect() {
     socket = new WebSocket(url);
@@ -72,48 +72,43 @@ export default function Client<
         json = JSON.parse(event.data.toString());
       } catch (error) {}
 
-      try {
-        const parsed = incoming.safeParse(json);
+      const parsed = incoming.safeParse(json);
 
-        if (parsed.success) {
-          const data = parsed.data;
+      if (parsed.success) {
+        const data = parsed.data;
 
-          queue.push(
-            {
-              at: Date.now(),
-              event: data[matchEventsOn],
-              data,
-            },
-            {
-              at: Date.now(),
-              event: "message",
-              data,
-            }
-          );
+        // queue.push(
+        //   {
+        //     at: Date.now(),
+        //     event: data[matchEventsOn],
+        //     data,
+        //   },
+        //   {
+        //     at: Date.now(),
+        //     event: "message",
+        //     data,
+        //   }
+        // );
 
-          if (matchEventsOn) {
-            events.emit(data[matchEventsOn], data);
-          }
-
-          events.emit("message", data);
-
-          return;
+        if (matchEventsOn) {
+          events.emit(data[matchEventsOn], data);
         }
 
-        throw new Error("InvalidPayload");
-      } catch (error) {
-        queue.push({
-          at: Date.now(),
-          event: "invalidPayload",
-          data: event.data,
-        });
+        events.emit("message", data);
 
-        return events.emit("invalidPayload", {
-          at: Date.now(),
-          data: event.data,
-          error,
-        });
+        return;
       }
+
+      // queue.push({
+      //   at: Date.now(),
+      //   event: "invalidPayload",
+      //   data: event.data,
+      // });
+
+      return events.emit("invalidPayload", {
+        at: Date.now(),
+        data: event.data,
+      });
     };
   }
 
