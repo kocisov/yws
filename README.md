@@ -8,7 +8,7 @@
 ## Installation
 
 ```bash
-$ (pnpm/yarn/npm) add yws@next
+$ (pnpm/yarn/npm) add yws@next zod
 ```
 
 ## Usage
@@ -76,6 +76,16 @@ const client = Client({
   matchEventsOn: "event",
   incoming: serverMessages,
   outgoing: clientMessages,
+  reconnect(event) {
+    return event.code !== 1001;
+  },
+  reconnectTimeout: 2_500,
+  heartbeat: {
+    interval: 25_000,
+    shape: {
+      event: "ping",
+    },
+  },
 });
 
 client.on("open", (event) => {
